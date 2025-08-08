@@ -43,7 +43,8 @@ const int MAX_LOG_KEPT_LINES = 3000;
 #define WM_TRAYICON (WM_USER + 1)
 #define ID_TRAY_EXIT 1001
 #define ID_TRAY_SHOW_LOG 1002
-#define ID_TRAY_AUTOSTART 1003
+#define ID_TRAY_OPEN_DIR 1003
+#define ID_TRAY_AUTOSTART 1004
 
 #define AUTOSTART_REG_KEY L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define AUTOSTART_REG_VALUE L"IRReceiver"
@@ -395,6 +396,12 @@ void ShowLogFile() {
   ShellExecuteW(NULL, L"open", logPath, NULL, NULL, SW_SHOW);
 }
 
+void OpenCurrentDirectory() {
+  wchar_t currentDir[MAX_PATH];
+  GetCurrentDirectoryW(MAX_PATH, currentDir);
+  ShellExecuteW(NULL, L"explore", currentDir, NULL, NULL, SW_SHOW);
+}
+
 BOOL IsAutoStartEnabled() {
   HKEY hKey;
   LONG result =
@@ -461,6 +468,7 @@ void ShowTrayMenu() {
 
   HMENU hMenu = CreatePopupMenu();
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_SHOW_LOG, L"查看日志");
+  AppendMenuW(hMenu, MF_STRING, ID_TRAY_OPEN_DIR, L"打开目录");
   AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
   UINT autoStartFlags = MF_STRING;
@@ -496,6 +504,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
           break;
         case ID_TRAY_SHOW_LOG:
           ShowLogFile();
+          break;
+        case ID_TRAY_OPEN_DIR:
+          OpenCurrentDirectory();
           break;
         case ID_TRAY_AUTOSTART:
           SetAutoStart(!IsAutoStartEnabled());
