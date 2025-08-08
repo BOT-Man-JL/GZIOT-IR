@@ -6,7 +6,7 @@
     {
       "label": "Build exe",
       "type": "shell",
-      "command": "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat\" && cl.exe /Ox /Zi /EHsc IR.cc",
+      "command": "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat\" && cl.exe /Ox /Zi /EHsc IR.cc && IR.exe",
       "problemMatcher": [],
       "group": {
         "kind": "build",
