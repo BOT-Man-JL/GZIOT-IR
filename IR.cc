@@ -3,13 +3,13 @@
 //------------------------------------------------------------------------------
 
 #include <Windows.h>
-#include <shellapi.h>
 
 #include <SetupAPI.h>
 #include <cfgmgr32.h>
 #include <fcntl.h>
 #include <hidsdi.h>
 #include <io.h>
+#include <shellapi.h>
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -171,7 +171,7 @@ HidDeviceInfo FindTargetDeviceImpl() {
 
     std::wstring devicePath = &detailData->DevicePath[0];
     std::wstring logPrefix =
-        L"设备 [" + std::to_wstring(deviceIndex) + L"]: " + devicePath + L"\n";
+        L"设备 [" + std::to_wstring(deviceIndex) + L"]: " + devicePath + L"\r\n";
 
     HANDLE hDevice =
         CreateFileW(devicePath.c_str(), GENERIC_READ | GENERIC_WRITE,
@@ -518,13 +518,18 @@ int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine,
                    int nCmdShow) {
+  wchar_t exePath[MAX_PATH];
+  GetModuleFileNameW(NULL, exePath, MAX_PATH);
+  *wcsrchr(exePath, L'\\') = L'\0';
+  SetCurrentDirectoryW(exePath);
+
   TrimLogFile();
   g_logFile = CreateFileW(LOG_FILENAME, GENERIC_WRITE, FILE_SHARE_READ, NULL,
                           OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (g_logFile == INVALID_HANDLE_VALUE) {
     MessageBoxW(
         NULL, (L"创建日志文件失败: " + std::to_wstring(GetLastError())).c_str(),
-        L"IR 接收器", MB_OK | MB_ICONERROR);
+                L"IR 接收器", MB_OK | MB_ICONERROR);
     return 1;
   }
   SetFilePointer(g_logFile, 0, NULL, FILE_END);
@@ -584,7 +589,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
     WriteLog(L"移除托盘图标失败: " + std::to_wstring(GetLastError()));
   }
 
-  WriteLog(L"程序退出\n\n");
+  WriteLog(L"程序退出\r\n");
   CloseHandle(g_logFile);
 
   return 0;
