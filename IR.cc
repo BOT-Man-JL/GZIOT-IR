@@ -221,13 +221,13 @@ HidDeviceInfo FindTargetDeviceImpl() {
     }
 
     std::wstringstream info;
-    info << logPrefix << std::hex << std::setfill(L'0') << L"    VID: 0x"
-         << std::setw(4) << attributes.VendorID << L", PID: 0x" << std::setw(4)
-         << attributes.ProductID << L", UsagePage: 0x" << caps.UsagePage
-         << L", UsageID: 0x" << caps.Usage << L", 制造商: " << manufacturer
-         << L", 产品: " << product << L", 输入 " << std::dec
-         << caps.InputReportByteLength << L" bytes, 输出 "
-         << caps.OutputReportByteLength << L" bytes, 功能 "
+    info << logPrefix << std::hex << L"    VID: 0x" << std::setw(4)
+         << std::setfill(L'0') << attributes.VendorID << L", PID: 0x"
+         << std::setw(4) << std::setfill(L'0') << attributes.ProductID
+         << L", UsagePage: 0x" << caps.UsagePage << L", UsageID: 0x"
+         << caps.Usage << L", 制造商: " << manufacturer << L", 产品: "
+         << product << L", 输入 " << std::dec << caps.InputReportByteLength
+         << L" bytes, 输出 " << caps.OutputReportByteLength << L" bytes, 功能 "
          << caps.FeatureReportByteLength << L" bytes";
     WriteLog(info.str());
 
@@ -271,9 +271,9 @@ void HandleHIDData(std::vector<BYTE> buffer) {
   }
 
   std::wstringstream hexString;
-  hexString << std::hex << std::uppercase << std::setw(2) << std::setfill(L'0')
-            << L"IR-" << static_cast<int>(buffer[5])
-            << static_cast<int>(buffer[6]) << L".bat";
+  hexString << std::hex << std::uppercase << L"IR-" << std::setw(2)
+            << std::setfill(L'0') << static_cast<int>(buffer[5]) << std::setw(2)
+            << std::setfill(L'0') << static_cast<int>(buffer[6]) << L".bat";
   std::wstring scriptName = hexString.str();
 
   if (GetFileAttributesW(scriptName.c_str()) == INVALID_FILE_ATTRIBUTES) {
