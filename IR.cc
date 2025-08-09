@@ -545,7 +545,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
   }
   SetFilePointer(g_logFile, 0, NULL, FILE_END);
 
-  WriteLog(L"程序启动");
+  WriteLog(L"================程序启动================");
 
   if (IsAutoStartEnabled()) {
     WriteLog(L"已启用开机自启动");
@@ -600,7 +600,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
     WriteLog(L"移除托盘图标失败: " + std::to_wstring(GetLastError()));
   }
 
-  WriteLog(L"程序退出\r\n");
+  WriteLog(L"================程序退出================");
   CloseHandle(g_logFile);
 
   return 0;
