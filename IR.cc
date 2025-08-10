@@ -45,6 +45,7 @@ const int MAX_LOG_KEPT_LINES = 3000;
 #define ID_TRAY_SHOW_LOG 1002
 #define ID_TRAY_OPEN_DIR 1003
 #define ID_TRAY_AUTOSTART 1004
+#define ID_TRAY_HELP 1005
 
 #define AUTOSTART_REG_KEY L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define AUTOSTART_REG_VALUE L"IRReceiver"
@@ -462,6 +463,10 @@ BOOL SetAutoStart(BOOL enable) {
   return result == ERROR_SUCCESS;
 }
 
+void ShowHelp() {
+  MessageBoxW(NULL, L"软件用途：\n配合 GZIOT 红外遥控 USB 接收器使用，当收到红外信号时执行自定义 .bat 脚本，以方便电脑集成到米家等智能家居系统中。\n\n如何使用：\n1. 通过【查看日志】确认收到红外信号对应的 .bat 脚本文件名。\n2. 在当前程序所在目录创建对应的 .bat 脚本（可通过【打开目录】找到目录）。\n3. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
+}
+
 void ShowTrayMenu() {
   POINT pt;
   GetCursorPos(&pt);
@@ -478,6 +483,7 @@ void ShowTrayMenu() {
   AppendMenuW(hMenu, autoStartFlags, ID_TRAY_AUTOSTART, L"开机自启动");
 
   AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+  AppendMenuW(hMenu, MF_STRING, ID_TRAY_HELP, L"使用说明");
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_EXIT, L"退出");
 
   SetForegroundWindow(g_hWnd);
@@ -510,6 +516,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
           break;
         case ID_TRAY_AUTOSTART:
           SetAutoStart(!IsAutoStartEnabled());
+          break;
+        case ID_TRAY_HELP:
+          ShowHelp();
           break;
       }
       break;
