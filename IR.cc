@@ -48,6 +48,7 @@ const int MAX_LOG_KEPT_LINES = 3000;
 #define ID_TRAY_OPEN_DIR 1004
 #define ID_TRAY_AUTOSTART 1005
 #define ID_TRAY_HELP 1006
+#define ID_TRAY_UPGRADE 1007
 
 #define AUTOSTART_REG_KEY L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define AUTOSTART_REG_VALUE L"IRReceiver"
@@ -522,9 +523,13 @@ void ShowHelp() {
                     L"1. 通过【编辑脚本】可以在收到红外信号后直接编辑对应的 .bat 脚本。\n"
                     L"2. 通过【查看日志】确认程序运行记录。\n"
                     L"3. 通过【打开目录】找到 .bat 脚本、日志文件所在目录。\n"
-                    L"4. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。\n"
-                    L"\n下载地址：\n"
-                    L"https://github.com/BOT-Man-JL/GZIOT-IR/releases/latest\n", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
+                    L"4. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
+}
+
+void CheckUpgrade() {
+  ShellExecuteW(NULL, L"open",
+                L"https://github.com/BOT-Man-JL/GZIOT-IR/releases/latest", NULL,
+                NULL, SW_SHOW);
 }
 
 void ShowTrayMenu() {
@@ -545,6 +550,7 @@ void ShowTrayMenu() {
 
   AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_HELP, L"使用说明");
+  AppendMenuW(hMenu, MF_STRING, ID_TRAY_UPGRADE, L"检查更新");
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_EXIT, L"退出");
 
   SetForegroundWindow(g_hWnd);
@@ -583,6 +589,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
           break;
         case ID_TRAY_HELP:
           ShowHelp();
+          break;
+        case ID_TRAY_UPGRADE:
+          CheckUpgrade();
           break;
       }
       break;
