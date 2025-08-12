@@ -1,0 +1,31 @@
+name: Build
+
+on: push
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup MSVC
+      uses: TheMrMilchmann/setup-msvc-dev@v3
+      with:
+        arch: x64
+
+    - name: Build
+      run: cl.exe /Ox /Zi /EHsc IR.cc
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        files: |
+          IR.exe
+          ir-config.exe
+          IR-*.bat
