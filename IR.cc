@@ -29,6 +29,7 @@ BOOL g_running = true;
 HANDLE g_logFile = INVALID_HANDLE_VALUE;
 HWND g_hWnd = NULL;
 NOTIFYICONDATAW g_nid = {};
+HWND g_editScriptMsgBox = NULL;
 
 const USAGE HID_IR_USAGE_PAGE = 0xFF00;
 const USAGE HID_IR_USAGE_ID = 0x1;
@@ -42,10 +43,11 @@ const int MAX_LOG_KEPT_LINES = 3000;
 
 #define WM_TRAYICON (WM_USER + 1)
 #define ID_TRAY_EXIT 1001
-#define ID_TRAY_SHOW_LOG 1002
-#define ID_TRAY_OPEN_DIR 1003
-#define ID_TRAY_AUTOSTART 1004
-#define ID_TRAY_HELP 1005
+#define ID_TRAY_EDIT_SCRIPT 1002
+#define ID_TRAY_SHOW_LOG 1003
+#define ID_TRAY_OPEN_DIR 1004
+#define ID_TRAY_AUTOSTART 1005
+#define ID_TRAY_HELP 1006
 
 #define AUTOSTART_REG_KEY L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define AUTOSTART_REG_VALUE L"IRReceiver"
@@ -278,6 +280,25 @@ void HandleHIDData(std::vector<BYTE> buffer) {
             << std::setfill(L'0') << static_cast<int>(buffer[6]) << L".bat";
   std::wstring scriptName = hexString.str();
 
+  if (g_editScriptMsgBox && IsWindow(g_editScriptMsgBox)) {
+    PostMessageW(g_editScriptMsgBox, WM_CLOSE, 0, 0);
+    g_editScriptMsgBox = NULL;
+
+    if (GetFileAttributesW(scriptName.c_str()) == INVALID_FILE_ATTRIBUTES) {
+      std::ofstream file(scriptName);
+      if (!file) {
+        WriteLog(L"创建脚本 " + scriptName + L" 失败: " +
+                 std::to_wstring(GetLastError()));
+        return;
+      }
+      WriteLog(L"创建脚本 " + scriptName + L" 成功");
+    }
+
+    WriteLog(L"编辑脚本 " + scriptName);
+    ShellExecuteW(NULL, L"edit", scriptName.c_str(), NULL, NULL, SW_SHOW);
+    return;
+  }
+
   if (GetFileAttributesW(scriptName.c_str()) == INVALID_FILE_ATTRIBUTES) {
     WriteLog(L"未找到脚本 " + scriptName);
     return;
@@ -389,11 +410,27 @@ BOOL RemoveTrayIcon() {
   return Shell_NotifyIconW(NIM_DELETE, &g_nid);
 }
 
+LRESULT CALLBACK MessageBoxHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+  if (nCode == HCBT_CREATEWND) {
+    g_editScriptMsgBox = (HWND)wParam;
+  } else if (nCode == HCBT_DESTROYWND) {
+    if ((HWND)wParam == g_editScriptMsgBox) {
+      g_editScriptMsgBox = NULL;
+    }
+  }
+  return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+void EditScript() {
+  HHOOK hook = SetWindowsHookExW(WH_CBT, MessageBoxHookProc, NULL, GetCurrentThreadId());
+  MessageBoxW(NULL, L"编辑步骤：\n1. 输入红外信号。\n2. 当电脑接收到信号后，会自动打开对应的脚本文件。\n3. 编辑脚本内容，执行想要执行的操作，并保存文件。\n4. 下次再输入相同红外信号时，会自动执行刚刚保存的脚本指令。\n\n使用说明：\n如果在收到红外信号前关闭当前弹窗，则会自动退出编辑模式（即如果再输入红外信号，则会直接尝试执行对应的脚本指令）。", L"IR 接收器", MB_OK | MB_ICONQUESTION);
+  UnhookWindowsHookEx(hook);
+}
+
 void ShowLogFile() {
   wchar_t logPath[MAX_PATH];
   GetCurrentDirectoryW(MAX_PATH, logPath);
   wcscat_s(logPath, L"\\" LOG_FILENAME);
-
   ShellExecuteW(NULL, L"open", logPath, NULL, NULL, SW_SHOW);
 }
 
@@ -464,7 +501,7 @@ BOOL SetAutoStart(BOOL enable) {
 }
 
 void ShowHelp() {
-  MessageBoxW(NULL, L"软件用途：\n配合 GZIOT 红外遥控 USB 接收器使用，当收到红外信号时执行自定义 .bat 脚本，以方便电脑集成到米家等智能家居系统中。\n\n如何使用：\n1. 通过【查看日志】确认收到红外信号对应的 .bat 脚本文件名。\n2. 在当前程序所在目录创建对应的 .bat 脚本（可通过【打开目录】找到目录）。\n3. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
+  MessageBoxW(NULL, L"软件用途：\n配合 GZIOT 红外遥控 USB 接收器使用，当收到红外信号时执行自定义 .bat 脚本，以方便电脑集成到米家等智能家居系统中。\n\n如何使用：\n1. 通过【编辑脚本】可以在收到红外信号后直接编辑对应的 .bat 脚本。\n2. 通过【查看日志】确认程序运行记录。\n3. 通过【打开目录】找到 .bat 脚本、日志文件所在目录。\n4. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
 }
 
 void ShowTrayMenu() {
@@ -472,6 +509,7 @@ void ShowTrayMenu() {
   GetCursorPos(&pt);
 
   HMENU hMenu = CreatePopupMenu();
+  AppendMenuW(hMenu, MF_STRING, ID_TRAY_EDIT_SCRIPT, L"编辑脚本");
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_SHOW_LOG, L"查看日志");
   AppendMenuW(hMenu, MF_STRING, ID_TRAY_OPEN_DIR, L"打开目录");
   AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
@@ -507,6 +545,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
         case ID_TRAY_EXIT:
           WriteLog(L"主动退出程序");
           PostQuitMessage(0);
+          break;
+        case ID_TRAY_EDIT_SCRIPT:
+          EditScript();
           break;
         case ID_TRAY_SHOW_LOG:
           ShowLogFile();
