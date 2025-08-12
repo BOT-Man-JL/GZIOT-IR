@@ -54,6 +54,10 @@ const int MAX_LOG_KEPT_LINES = 3000;
 
 #define LOG_FILENAME L"IR.log"
 
+#ifndef APP_VERSION
+#define APP_VERSION L"0.0"
+#endif
+
 void TrimLogFile() {
   if (GetFileAttributesW(LOG_FILENAME) == INVALID_FILE_ATTRIBUTES) {
     return;
@@ -174,8 +178,8 @@ HidDeviceInfo FindTargetDeviceImpl() {
     }
 
     std::wstring devicePath = &detailData->DevicePath[0];
-    std::wstring logPrefix =
-        L"设备 [" + std::to_wstring(deviceIndex) + L"]: " + devicePath + L"\r\n";
+    std::wstring logPrefix = L"设备 [" + std::to_wstring(deviceIndex) + L"]: " +
+                             devicePath + L"\r\n";
 
     HANDLE hDevice =
         CreateFileW(devicePath.c_str(), GENERIC_READ | GENERIC_WRITE,
@@ -422,8 +426,18 @@ LRESULT CALLBACK MessageBoxHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 void EditScript() {
-  HHOOK hook = SetWindowsHookExW(WH_CBT, MessageBoxHookProc, NULL, GetCurrentThreadId());
-  MessageBoxW(NULL, L"编辑步骤：\n1. 输入红外信号。\n2. 当电脑接收到信号后，会自动打开对应的脚本文件。\n3. 编辑脚本内容，执行想要执行的操作，并保存文件。\n4. 下次再输入相同红外信号时，会自动执行刚刚保存的脚本指令。\n\n使用说明：\n如果在收到红外信号前关闭当前弹窗，则会自动退出编辑模式（即如果再输入红外信号，则会直接尝试执行对应的脚本指令）。", L"IR 接收器", MB_OK | MB_ICONQUESTION);
+  HHOOK hook =
+      SetWindowsHookExW(WH_CBT, MessageBoxHookProc, NULL, GetCurrentThreadId());
+  MessageBoxW(NULL,
+              L"编辑步骤：\n"
+              L"1. 输入红外信号。\n"
+              L"2. 当电脑接收到信号后，会自动打开对应的脚本文件。\n"
+              L"3. 编辑脚本内容，执行想要执行的操作，并保存文件。\n"
+              L"4. 下次再输入相同红外信号时，会自动执行刚刚保存的脚本指令。\n"
+              L"\n使用说明：\n"
+              L"如果在收到红外信号前关闭当前弹窗，则会自动退出编辑模式（即如果"
+              L"再输入红外信号，则会直接尝试执行对应的脚本指令）。",
+              L"IR 接收器", MB_OK | MB_ICONQUESTION);
   UnhookWindowsHookEx(hook);
 }
 
@@ -501,7 +515,16 @@ BOOL SetAutoStart(BOOL enable) {
 }
 
 void ShowHelp() {
-  MessageBoxW(NULL, L"软件用途：\n配合 GZIOT 红外遥控 USB 接收器使用，当收到红外信号时执行自定义 .bat 脚本，以方便电脑集成到米家等智能家居系统中。\n\n如何使用：\n1. 通过【编辑脚本】可以在收到红外信号后直接编辑对应的 .bat 脚本。\n2. 通过【查看日志】确认程序运行记录。\n3. 通过【打开目录】找到 .bat 脚本、日志文件所在目录。\n4. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
+  MessageBoxW(NULL, L"版本号：v" APP_VERSION L"\n"
+                    L"\n软件用途：\n"
+                    L"配合 GZIOT 红外遥控 USB 接收器使用，当收到红外信号时执行自定义 .bat 脚本，以方便电脑集成到米家等智能家居系统中。\n"
+                    L"\n如何使用：\n"
+                    L"1. 通过【编辑脚本】可以在收到红外信号后直接编辑对应的 .bat 脚本。\n"
+                    L"2. 通过【查看日志】确认程序运行记录。\n"
+                    L"3. 通过【打开目录】找到 .bat 脚本、日志文件所在目录。\n"
+                    L"4. 通过【开机自启动】实现开机自动运行当前程序（如果程序从当前目录删除或移动，则会失效）。\n"
+                    L"\n下载地址：\n"
+                    L"https://github.com/BOT-Man-JL/GZIOT-IR/releases/latest\n", L"IR 接收器", MB_OK | MB_ICONINFORMATION);
 }
 
 void ShowTrayMenu() {
@@ -590,7 +613,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
   if (g_logFile == INVALID_HANDLE_VALUE) {
     MessageBoxW(
         NULL, (L"创建日志文件失败: " + std::to_wstring(GetLastError())).c_str(),
-                L"IR 接收器", MB_OK | MB_ICONERROR);
+        L"IR 接收器", MB_OK | MB_ICONERROR);
     return 1;
   }
   SetFilePointer(g_logFile, 0, NULL, FILE_END);

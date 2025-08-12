@@ -18,8 +18,21 @@ jobs:
       with:
         arch: x64
 
+    - name: Set Version
+      if: github.ref_type == 'tag'
+      run: |
+        $version = "${{ github.ref_name }}"
+        # Remove 'v' prefix if exists (e.g., v0.2 -> 0.2)
+        $version = $version -replace '^v',''
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+        
     - name: Build
-      run: cl.exe /Ox /Zi /EHsc IR.cc
+      run: |
+        if ("${{ github.ref_type }}" -eq "tag") {
+          cl.exe /Ox /Zi /EHsc /DAPP_VERSION=L"`"$env:VERSION`"" IR.cc
+        } else {
+          cl.exe /Ox /Zi /EHsc IR.cc
+        }
 
     - name: Release
       uses: softprops/action-gh-release@v2
