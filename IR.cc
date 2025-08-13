@@ -1,5 +1,6 @@
 ﻿//------------------------------------------------------------------------------
-// compile command: cl.exe /Ox /Zi /EHsc IR.cc
+// Copyright (c) 2025 BOT-Man-JL
+// Licensed under the MIT License.
 //------------------------------------------------------------------------------
 
 #include <Windows.h>
@@ -30,6 +31,7 @@ HANDLE g_logFile = INVALID_HANDLE_VALUE;
 HWND g_hWnd = NULL;
 NOTIFYICONDATAW g_nid = {};
 HWND g_editScriptMsgBox = NULL;
+HHOOK g_hookMsgBox = NULL;
 
 const USAGE HID_IR_USAGE_PAGE = 0xFF00;
 const USAGE HID_IR_USAGE_ID = 0x1;
@@ -266,6 +268,12 @@ HidDeviceInfo FindTargetDevice() {
 
     WriteLog(L"未找到目标设备 (" + std::to_wstring(SCAN_INTERVAL_S) +
              L" 秒后重试)");
+    if (g_editScriptMsgBox && IsWindow(g_editScriptMsgBox)) {
+      PostMessageW(g_editScriptMsgBox, WM_CLOSE, 0, 0);
+      g_editScriptMsgBox = NULL;
+      WriteLog(L"退出编辑模式");
+    }
+
     std::this_thread::sleep_for(std::chrono::seconds(SCAN_INTERVAL_S));
   }
 
@@ -417,7 +425,16 @@ BOOL RemoveTrayIcon() {
 
 LRESULT CALLBACK MessageBoxHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   if (nCode == HCBT_CREATEWND) {
-    g_editScriptMsgBox = (HWND)wParam;
+    LPCBT_CREATEWNDW createStruct = (LPCBT_CREATEWNDW)lParam;
+    if (createStruct && createStruct->lpcs) {
+      DWORD style = createStruct->lpcs->style;
+      if ((style & WS_POPUP) && (style & DS_MODALFRAME)) {
+        g_editScriptMsgBox = (HWND)wParam;
+        if (g_hookMsgBox) {
+          UnhookWindowsHookEx(g_hookMsgBox);
+        }
+      }
+    }
   } else if (nCode == HCBT_DESTROYWND) {
     if ((HWND)wParam == g_editScriptMsgBox) {
       g_editScriptMsgBox = NULL;
@@ -427,8 +444,15 @@ LRESULT CALLBACK MessageBoxHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 void EditScript() {
-  HHOOK hook =
+  if (g_hookMsgBox) {
+    UnhookWindowsHookEx(g_hookMsgBox);
+  }
+  g_hookMsgBox =
       SetWindowsHookExW(WH_CBT, MessageBoxHookProc, NULL, GetCurrentThreadId());
+
+  if (g_editScriptMsgBox) {
+    return;
+  }
   MessageBoxW(NULL,
               L"编辑步骤：\n"
               L"1. 输入红外信号。\n"
@@ -439,7 +463,10 @@ void EditScript() {
               L"如果在收到红外信号前关闭当前弹窗，则会自动退出编辑模式（即如果"
               L"再输入红外信号，则会直接尝试执行对应的脚本指令）。",
               L"IR 接收器", MB_OK | MB_ICONQUESTION);
-  UnhookWindowsHookEx(hook);
+
+  if (g_hookMsgBox) {
+    UnhookWindowsHookEx(g_hookMsgBox);
+  }
 }
 
 void ShowLogFile() {
@@ -627,7 +654,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
   }
   SetFilePointer(g_logFile, 0, NULL, FILE_END);
 
-  WriteLog(L"================程序启动================");
+  WriteLog(L"================程序启动 v" APP_VERSION L"================");
 
   if (IsAutoStartEnabled()) {
     WriteLog(L"已启用开机自启动");
@@ -682,7 +709,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
     WriteLog(L"移除托盘图标失败: " + std::to_wstring(GetLastError()));
   }
 
-  WriteLog(L"================程序退出================");
+  WriteLog(L"================程序退出 v" APP_VERSION L"================");
   CloseHandle(g_logFile);
 
   return 0;

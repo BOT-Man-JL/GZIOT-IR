@@ -40,5 +40,6 @@ jobs:
       with:
         files: |
           IR.exe
+          IR.pdb
           ir-config.exe
           IR-*.bat
